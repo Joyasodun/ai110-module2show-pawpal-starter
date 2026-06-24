@@ -1,15 +1,39 @@
 classDiagram
-    %% Replace the placeholders below with your actual classes, attributes, methods, and relationships.
-    %% Keep this file updated so it matches your final implementation.
+    %% PawPal+ — pet care planning assistant
 
-    class ClassName {
-        +type attribute
-        +method() returnType
+    class Pet {
+        +str name
+        +str species
+        +list~str~ preferences
+        +get_preferences() list~str~
     }
 
-    class AnotherClass {
-        +type attribute
-        +method() returnType
+    class Owner {
+        +str name
+        +list~Pet~ pets
+        +list~str~ availableHours
+        +add_pet(pet) None
+        +get_availability() list~str~
     }
 
-    ClassName --> AnotherClass : relationship
+    class Task {
+        +str todo
+        +int importance
+        +str status
+        +mark_done() None
+    }
+
+    class PetCare {
+        +str food
+        +int ouncesOfFood
+        +bool shower
+        +bool walk
+        +bool fed
+        +feed(ounces) None
+        +all_done() bool
+    }
+
+    Owner "1" --> "*" Pet : owns
+    Owner "1" --> "*" Task : plans
+    Pet "1" --> "1" PetCare : has
+    Task --> PetCare : updates
