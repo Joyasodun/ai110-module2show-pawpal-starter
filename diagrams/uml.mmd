@@ -11,15 +11,20 @@ classDiagram
     class Owner {
         +str name
         +list~Pet~ pets
+        +list~Task~ tasks
         +list~str~ availableHours
         +add_pet(pet) None
+        +add_task(task) None
         +get_availability() list~str~
     }
 
     class Task {
         +str todo
         +int importance
-        +str status
+        +int durationMinutes
+        +str careType
+        +Pet pet
+        +bool done
         +mark_done() None
     }
 
@@ -33,7 +38,17 @@ classDiagram
         +all_done() bool
     }
 
+    class Scheduler {
+        +list~Task~ tasks
+        +Owner owner
+        +build_schedule() list~Task~
+        +explain_plan() str
+    }
+
     Owner "1" --> "*" Pet : owns
     Owner "1" --> "*" Task : plans
     Pet "1" --> "1" PetCare : has
+    Task "*" --> "1" Pet : is for
     Task --> PetCare : updates
+    Scheduler --> Owner : reads availability
+    Scheduler "1" --> "*" Task : orders
