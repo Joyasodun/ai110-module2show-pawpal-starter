@@ -41,8 +41,9 @@ Yes. After reviewing my class skeleton I found gaps that would have blocked the 
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+One tradeoff my scheduler makes is that its conflict detection (`detect_conflicts()`) only flags tasks that share the **exact same start time**, not tasks whose **durations overlap**. It groups tasks by their `"HH:MM"` start string and warns when two land on the same time. So a 30-minute walk at 08:00 and a feeding at 08:15 truly collide in real life, but because their start times differ, my scheduler stays silent. Catching true overlaps would mean comparing each task's `[start, start + duration)` interval against every other task's interval.
+
+This tradeoff is reasonable for this scenario because the goal is a *lightweight* warning, not a guarantee. The exact-match check is simple, fast (one pass with a dictionary), and easy to read, and it already catches the most common and most confusing case — two things booked for the same moment. Full interval-overlap checking adds noticeably more logic for a pet-care planner where the owner can still eyeball the printed schedule and adjust. I'd rather ship the simple, correct-for-its-scope version and note the limitation than add complexity the scenario doesn't demand. (This mirrors a second, related tradeoff: `detect_conflicts()` reports problems as warning strings and never raises or drops a task, so the program keeps running and the owner decides what to do.)
 
 ---
 

@@ -76,14 +76,31 @@ Sample test output:
 
 ## 📐 Smarter Scheduling
 
-> Fill in once you've implemented scheduling logic.
+Beyond a basic priority sort, PawPal+ implements several "smarter" scheduling features. Each is listed below with the method that implements it (all in `pawpal_system.py`).
 
 | Feature | Method(s) | Notes |
 |---------|-----------|-------|
-| Task sorting | | e.g., by priority, duration |
-| Filtering | | e.g., skip tasks if time runs out |
-| Conflict handling | | e.g., overlapping time slots |
-| Recurring tasks | | e.g., daily vs. weekly |
+| Task sorting | `Scheduler.sort_by_time()` | Returns the scheduled `Task` objects ordered by their assigned start time. |
+| Filtering | `Scheduler.filter_tasks()` | Filters by completion status (`done=True/False`) and/or `pet_name` (case-insensitive). |
+| Conflict detection | `Scheduler.detect_conflicts()` | Warns about same-start-time clashes. |
+| Recurring tasks | `Scheduler.mark_task_complete()` + `Task.next_occurrence()` | Completing a daily/weekly task auto-creates its next occurrence. |
+| Time-aware scheduling | `Scheduler.build_timed_schedule()` | Packs tasks into real 60-min availability slots and stamps each with an `"HH:MM"` start. |
+
+### Sorting behavior — `Scheduler.sort_by_time()`
+
+The scheduler stamps each scheduled task with a start time in `"HH:MM"` form on `task.time`. `sort_by_time()` sorts those `Task` objects with `sorted(..., key=lambda task: task.time)`. Because zero-padded `"HH:MM"` strings sort the same way alphabetically as chronologically (`"08:30" < "12:00" < "18:05"`), sorting the raw string needs no date parsing.
+
+### Filtering behavior — `Scheduler.filter_tasks(done=None, pet_name=None)`
+
+Filters the owner's tasks by completion status and/or pet name. Pass `done=True` for completed tasks or `done=False` for pending ones; pass `pet_name` (case-insensitive) to keep only one pet's tasks. Either argument may be omitted; with none, it returns every task.
+
+### Conflict detection logic — `Scheduler.detect_conflicts()`
+
+A lightweight strategy: it groups every task that has an assigned start time by that `"HH:MM"` string, and any time claimed by more than one task produces a warning message. It works across the same pet *or* different pets. It only **reports** conflicts as human-readable strings — it never raises an exception or drops a task, so the program keeps running. **Tradeoff:** it flags only *exact* same-start-time clashes, not *overlapping durations* (a 30-min task at 08:00 and a task at 08:15 truly overlap but aren't flagged).
+
+### Recurring task logic — `Scheduler.mark_task_complete()` and `Task.next_occurrence()`
+
+When a `"daily"` or `"weekly"` task is completed via `mark_task_complete()`, it is marked done and a fresh, not-done copy is automatically created for the next occurrence and registered on the owner. `Task.next_occurrence()` computes the new due date with `datetime.timedelta` — `timedelta(days=1)` for daily, `timedelta(weeks=1)` for weekly — which correctly handles month and year boundaries. A `"once"` task returns `None` and does not repeat.
 
 ## 📸 Demo Walkthrough
 
