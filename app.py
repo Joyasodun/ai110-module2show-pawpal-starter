@@ -61,7 +61,7 @@ availability = st.multiselect(
     "Available parts of day",
     options=["Morning", "Afternoon", "Evening"],
     default=owner.get_availability() or ["Morning", "Afternoon", "Evening"],
-    help="Morning: 5:00 AM–12:00 PM · Afternoon: 12:00 PM–7:00 PM · Evening: 7:00 PM–12:00 AM",
+    help="Morning: 8:00 AM–12:00 PM · Afternoon: 12:00 PM–7:00 PM · Evening: 7:00 PM–12:00 AM",
 )
 owner.available_hours = availability
 

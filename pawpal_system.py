@@ -183,9 +183,9 @@ class Scheduler:
         return f"{display_hour}:{minutes:02d} {suffix}"
 
     # Parts of the day -> the (start, end) minute window the owner is available.
-    # Morning 5 AM-12 PM, Afternoon 12-7 PM, Evening 7 PM-12 AM.
+    # Morning 8 AM-12 PM, Afternoon 12-7 PM, Evening 7 PM-12 AM.
     PARTS_OF_DAY = {
-        "Morning": (5 * 60, 12 * 60),
+        "Morning": (8 * 60, 12 * 60),
         "Afternoon": (12 * 60, 19 * 60),
         "Evening": (19 * 60, 24 * 60),
     }

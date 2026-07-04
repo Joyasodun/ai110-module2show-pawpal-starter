@@ -145,7 +145,7 @@ When a `"daily"` or `"weekly"` task is completed via `mark_task_complete()`, it 
 Run the app with `streamlit run app.py`. The interface lets a pet owner:
 
 - **Enter owner and pet info** — owner name, pet name, and species.
-- **Set availability** — pick which parts of the day you're free (Morning 5 AM–12 PM, Afternoon 12–7 PM, Evening 7 PM–12 AM). Tasks are scheduled into these windows, and times display in 12-hour AM/PM format.
+- **Set availability** — pick which parts of the day you're free (Morning 8 AM–12 PM, Afternoon 12–7 PM, Evening 7 PM–12 AM). Tasks are scheduled into these windows, and times display in 12-hour AM/PM format.
 - **Add tasks** — each with a title, duration (minutes), and importance (1–5, higher = more urgent).
 - **View current tasks in a table**, with a **"Filter by pet"** dropdown that uses `Scheduler.filter_tasks()` to narrow the list to a single pet. A ✅/⬜️ column shows completion status.
 - **Generate today's schedule** — a single button builds the timed plan.
