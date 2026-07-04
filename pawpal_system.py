@@ -174,9 +174,37 @@ class Scheduler:
 
     @staticmethod
     def _to_clock(total_minutes: int) -> str:
-        """Convert minutes past midnight back into an "HH:MM" string."""
+        """Convert minutes past midnight into a 12-hour "H:MM AM/PM" string."""
         hours, minutes = divmod(total_minutes, 60)
-        return f"{hours:02d}:{minutes:02d}"
+        suffix = "AM" if hours < 12 else "PM"
+        display_hour = hours % 12
+        if display_hour == 0:
+            display_hour = 12
+        return f"{display_hour}:{minutes:02d} {suffix}"
+
+    # Parts of the day -> the (start, end) minute window the owner is available.
+    # Morning 5 AM-12 PM, Afternoon 12-7 PM, Evening 7 PM-12 AM.
+    PARTS_OF_DAY = {
+        "Morning": (5 * 60, 12 * 60),
+        "Afternoon": (12 * 60, 19 * 60),
+        "Evening": (19 * 60, 24 * 60),
+    }
+
+    def _availability_windows(self) -> List[Tuple[int, int]]:
+        """Return the owner's availability as (start, end) minute windows.
+
+        Each entry in the owner's availability is either a part-of-day name
+        ("Morning"/"Afternoon"/"Evening"), expanded to that whole window, or a
+        legacy "HH:MM" start time, treated as a single 60-minute slot.
+        """
+        windows: List[Tuple[int, int]] = []
+        for entry in self.owner.get_availability():
+            if entry in self.PARTS_OF_DAY:
+                windows.append(self.PARTS_OF_DAY[entry])
+            else:  # legacy "HH:MM" start time -> a single 60-minute slot
+                start = self._to_minutes(entry)
+                windows.append((start, start + 60))
+        return windows
 
     # Time-of-day words -> the [start, end) minute window they prefer.
     _TIME_WINDOWS = {
@@ -228,42 +256,42 @@ class Scheduler:
     def build_timed_schedule(self) -> List[Tuple[str, Task]]:
         """Assign each scheduled task a real start time.
 
-        Pending tasks are considered most-urgent first. Each slot (e.g. "08:00")
-        offers 60 minutes of care time. Every task is placed in the *earliest
-        slot that still has room for it* (first fit), and the running clock in
-        that slot advances by its duration. A task that fits in no single slot
-        is skipped, but — unlike a single running pointer — it does not block
-        the tasks after it from being placed.
+        Pending tasks are considered most-urgent first. The owner's availability
+        is expanded into time windows (a part of day like "Morning", or a legacy
+        60-minute "HH:MM" slot). Every task is placed in the *earliest window
+        that still has room for it* (first fit), and the running clock in that
+        window advances by its duration. A task that fits in no window is
+        skipped, but it does not block the tasks after it from being placed.
 
-        Returns a list of ("HH:MM", Task) pairs in chronological order.
+        Returns a list of ("H:MM AM/PM", Task) pairs in chronological order.
         """
         ordered = sorted(
             self.pending_tasks(),
             key=lambda task: (-task.importance, task.duration_minutes),
         )
-        slots = [self._to_minutes(hour) for hour in self.owner.get_availability()]
-        if not slots or not ordered:
+        windows = self._availability_windows()
+        if not windows or not ordered:
             return []
 
-        # Each slot offers 60 minutes of care time.
-        slot_ends = [start + 60 for start in slots]
-        # Track the running clock (next free minute) within each slot.
-        clocks = list(slots)
+        starts = [start for start, _end in windows]
+        ends = [end for _start, end in windows]
+        # Track the running clock (next free minute) within each window.
+        clocks = list(starts)
 
         placed: List[Tuple[int, Task]] = []
         for task in ordered:
-            # Bias placement toward the task's preferred time of day: try slots
-            # inside its window first, then fall back to any slot with room.
-            window = self._preferred_window(task)
-            if window is not None:
-                low, high = window
-                preferred = [i for i, s in enumerate(slots) if low <= s < high]
-                order = preferred + [i for i in range(len(slots)) if i not in preferred]
+            # Bias placement toward the task's preferred time of day: try windows
+            # inside its preferred range first, then fall back to any with room.
+            pref = self._preferred_window(task)
+            if pref is not None:
+                low, high = pref
+                preferred = [i for i, s in enumerate(starts) if low <= s < high]
+                order = preferred + [i for i in range(len(windows)) if i not in preferred]
             else:
-                order = range(len(slots))
+                order = range(len(windows))
 
             for index in order:
-                if clocks[index] + task.duration_minutes <= slot_ends[index]:
+                if clocks[index] + task.duration_minutes <= ends[index]:
                     placed.append((clocks[index], task))
                     clocks[index] += task.duration_minutes
                     break
@@ -321,18 +349,28 @@ class Scheduler:
             )
         return "\n".join(lines)
 
-    def sort_by_time(self) -> List[Task]:
-        """Return the scheduled Task objects ordered by their ``time`` attribute.
+    @staticmethod
+    def _clock_to_minutes(clock: str) -> int:
+        """Convert a 12-hour "H:MM AM/PM" display string into minutes."""
+        time_part, suffix = clock.split(" ")
+        hours, minutes = (int(part) for part in time_part.split(":"))
+        if suffix == "AM":
+            hours = 0 if hours == 12 else hours
+        else:  # PM
+            hours = 12 if hours == 12 else hours + 12
+        return hours * 60 + minutes
 
-        Building the schedule stamps each scheduled task with a start time in
-        "HH:MM" form on ``task.time``. We then sort those Task objects with
-        ``sorted()`` and a ``key`` lambda that reads ``task.time``. Because
-        zero-padded "HH:MM" strings sort the same way alphabetically as they do
-        chronologically ("08:30" < "12:00" < "18:05"), sorting the raw string is
-        enough — no time parsing needed.
+    def sort_by_time(self) -> List[Task]:
+        """Return the scheduled Task objects ordered chronologically by time.
+
+        Building the schedule stamps each scheduled task with a start time on
+        ``task.time`` in 12-hour "H:MM AM/PM" form. Those display strings do NOT
+        sort correctly as plain text ("12:00 PM" < "6:00 PM" < "8:00 AM"
+        alphabetically), so we sort with a ``key`` lambda that converts each
+        back to minutes past midnight for a true chronological order.
         """
         scheduled = [task for _start, task in self.build_timed_schedule()]
-        return sorted(scheduled, key=lambda task: task.time)
+        return sorted(scheduled, key=lambda task: self._clock_to_minutes(task.time))
 
     def filter_tasks(
         self,

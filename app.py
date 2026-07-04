@@ -50,9 +50,20 @@ st.caption("Add a few tasks. In your final version, these should feed into your 
 
 # Create the Owner once and keep it in the session "vault" so tasks persist.
 if "owner" not in st.session_state:
-    st.session_state.owner = Owner(owner_name, available_hours=["08:00", "12:00", "18:00"])
+    st.session_state.owner = Owner(owner_name, available_hours=["Morning", "Afternoon", "Evening"])
 
 owner = st.session_state.owner
+
+# Let the user choose which parts of the day they're available for care.
+st.markdown("### Availability")
+st.caption("Pick the parts of the day you're free. Tasks are scheduled into these windows.")
+availability = st.multiselect(
+    "Available parts of day",
+    options=["Morning", "Afternoon", "Evening"],
+    default=owner.get_availability() or ["Morning", "Afternoon", "Evening"],
+    help="Morning: 5:00 AM–12:00 PM · Afternoon: 12:00 PM–7:00 PM · Evening: 7:00 PM–12:00 AM",
+)
+owner.available_hours = availability
 
 # Make sure a Pet with this name exists on the owner; reuse it if it's already there.
 pet = next((p for p in owner.pets if p.name == pet_name), None)

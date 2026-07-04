@@ -36,7 +36,7 @@ def test_timed_schedule_assigns_sequential_start_times():
 
     timed = Scheduler(owner).build_timed_schedule()
 
-    assert [start for start, _ in timed] == ["08:00", "08:30"]
+    assert [start for start, _ in timed] == ["8:00 AM", "8:30 AM"]
     assert [task.todo for _, task in timed] == ["Walk", "Feed"]
 
 
@@ -85,8 +85,8 @@ def test_preference_biases_matching_task_to_its_time_window():
 
     timed = dict((task.todo, start) for start, task in Scheduler(owner).build_timed_schedule())
 
-    assert timed["Walk"] == "18:00"
-    assert timed["Feed"] == "08:00"
+    assert timed["Walk"] == "6:00 PM"
+    assert timed["Feed"] == "8:00 AM"
 
 
 def test_completing_daily_task_creates_next_day_occurrence():
@@ -159,9 +159,7 @@ def test_sort_by_time_returns_tasks_in_chronological_order():
     times = [task.time for task in ordered]
 
     # Each task lands in its own slot; the returned list is earliest-first.
-    assert times == ["08:00", "12:00", "18:00"]
-    # And the times are sorted (defensive check that it's truly chronological).
-    assert times == sorted(times)
+    assert times == ["8:00 AM", "12:00 PM", "6:00 PM"]
 
 
 def test_detect_conflicts_flags_same_time_tasks():

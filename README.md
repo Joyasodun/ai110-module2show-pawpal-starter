@@ -145,6 +145,7 @@ When a `"daily"` or `"weekly"` task is completed via `mark_task_complete()`, it 
 Run the app with `streamlit run app.py`. The interface lets a pet owner:
 
 - **Enter owner and pet info** — owner name, pet name, and species.
+- **Set availability** — pick which parts of the day you're free (Morning 5 AM–12 PM, Afternoon 12–7 PM, Evening 7 PM–12 AM). Tasks are scheduled into these windows, and times display in 12-hour AM/PM format.
 - **Add tasks** — each with a title, duration (minutes), and importance (1–5, higher = more urgent).
 - **View current tasks in a table**, with a **"Filter by pet"** dropdown that uses `Scheduler.filter_tasks()` to narrow the list to a single pet. A ✅/⬜️ column shows completion status.
 - **Generate today's schedule** — a single button builds the timed plan.
@@ -176,17 +177,17 @@ python main.py
            TODAY'S SCHEDULE
 ========================================
 Care plan for Alex:
-1. 08:00 — Morning walk for Rex (importance 5, 30 min) — scheduled at 08:00 to match its preferred time of day.
-2. 08:30 — Feed Mochi for Mochi (importance 4, 5 min) — scheduled at 08:30 because it is among the most urgent tasks that fit.
-3. 08:35 — Breakfast feeding for Rex (importance 4, 10 min) — scheduled at 08:35 because it is among the most urgent tasks that fit.
-4. 08:45 — Litter box cleanup for Mochi (importance 3, 15 min) — scheduled at 08:45 because it is among the most urgent tasks that fit.
+1. 8:00 AM — Morning walk for Rex (importance 5, 30 min) — scheduled at 8:00 AM to match its preferred time of day.
+2. 8:30 AM — Feed Mochi for Mochi (importance 4, 5 min) — scheduled at 8:30 AM because it is among the most urgent tasks that fit.
+3. 8:35 AM — Breakfast feeding for Rex (importance 4, 10 min) — scheduled at 8:35 AM to match its preferred time of day.
+4. 8:45 AM — Litter box cleanup for Mochi (importance 3, 15 min) — scheduled at 8:45 AM because it is among the most urgent tasks that fit.
 ========================================
         SCHEDULE SORTED BY TIME
 ========================================
-08:00  Morning walk (Rex)
-08:30  Feed Mochi (Mochi)
-08:35  Breakfast feeding (Rex)
-08:45  Litter box cleanup (Mochi)
+8:00 AM  Morning walk (Rex)
+8:30 AM  Feed Mochi (Mochi)
+8:35 AM  Breakfast feeding (Rex)
+8:45 AM  Litter box cleanup (Mochi)
 ========================================
               FILTERS
 ========================================
