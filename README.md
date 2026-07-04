@@ -145,14 +145,14 @@ When a `"daily"` or `"weekly"` task is completed via `mark_task_complete()`, it 
 Run the app with `streamlit run app.py`. The interface lets a pet owner:
 
 - **Enter owner and pet info** — owner name, pet name, and species.
-- **Add tasks** — each with a title, duration (minutes), and priority (low / medium / high, mapped to the internal 1–5 importance scale).
+- **Add tasks** — each with a title, duration (minutes), and importance (1–5, higher = more urgent).
 - **View current tasks in a table**, with a **"Filter by pet"** dropdown that uses `Scheduler.filter_tasks()` to narrow the list to a single pet. A ✅/⬜️ column shows completion status.
 - **Generate today's schedule** — a single button builds the timed plan.
 
 ### Example workflow
 
 1. Enter the owner ("Alex") and add a pet ("Rex", a dog).
-2. Add a few tasks — e.g. a 30-min "Morning walk" (high priority) and a 10-min "Breakfast feeding" (medium).
+2. Add a few tasks — e.g. a 30-min "Morning walk" (importance 5) and a 10-min "Breakfast feeding" (importance 3).
 3. Add a second pet ("Mochi", a cat) and a task for it, then use **Filter by pet** to view just one pet's tasks.
 4. Click **Generate schedule** to see today's plan.
 

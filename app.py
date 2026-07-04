@@ -66,15 +66,13 @@ with col1:
 with col2:
     duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20)
 with col3:
-    priority = st.selectbox("Priority", ["low", "medium", "high"], index=2)
-
-# Translate the UI's word-based priority into the 1-5 importance your Task class expects.
-importance_map = {"low": 1, "medium": 3, "high": 5}
+    # Importance is a 1-5 scale (higher = more urgent), matching Task.importance.
+    importance = st.number_input("Importance (1-5)", min_value=1, max_value=5, value=5)
 
 if st.button("Add task"):
     task = Task(
         todo=task_title,
-        importance=importance_map[priority],
+        importance=int(importance),
         duration_minutes=int(duration),
         pet=pet,
     )
@@ -116,7 +114,7 @@ st.subheader("Today's Schedule")
 st.caption("Builds a timed plan from your tasks, sorted by clock time, and flags conflicts.")
 
 if st.button("Generate schedule"):
-    if not owner.pending_tasks():
+    if not scheduler.pending_tasks():
         st.info("No pending tasks to schedule. Add a task above first.")
     else:
         # Conflict warnings first — surface problems before the plan itself.
