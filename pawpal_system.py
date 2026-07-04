@@ -181,8 +181,14 @@ class Scheduler:
     # Time-of-day words -> the [start, end) minute window they prefer.
     _TIME_WINDOWS = {
         "morning": (0, 12 * 60),
+        "breakfast": (6 * 60, 10 * 60),
+        "noon": (11 * 60, 14 * 60),
+        "lunch": (11 * 60, 14 * 60),
+        "midday": (11 * 60, 14 * 60),
         "afternoon": (12 * 60, 17 * 60),
-        "evening": (17 * 60, 24 * 60),
+        "evening": (17 * 60, 21 * 60),
+        "dinner": (17 * 60, 20 * 60),
+        "night": (20 * 60, 24 * 60),
     }
 
     @classmethod
