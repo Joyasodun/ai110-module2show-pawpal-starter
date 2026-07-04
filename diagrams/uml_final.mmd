@@ -1,0 +1,74 @@
+classDiagram
+    %% PawPal+ — pet care planning assistant (final implementation)
+
+    class Pet {
+        +str name
+        +str species
+        +list~str~ preferences
+        +list~Task~ tasks
+        +get_preferences() list~str~
+        +add_task(task) None
+        +get_tasks() list~Task~
+    }
+
+    class Owner {
+        +str name
+        +list~Pet~ pets
+        +list~Task~ tasks
+        +list~str~ available_hours
+        +add_pet(pet) None
+        +add_task(task) None
+        +get_all_tasks() list~Task~
+        +get_availability() list~str~
+    }
+
+    class Task {
+        +str todo
+        +int importance
+        +int duration_minutes
+        +Pet pet
+        +str care_type
+        +str frequency
+        +bool done
+        +str time
+        +date due_date
+        +mark_done() None
+        +is_complete() bool
+        +next_occurrence() Task
+    }
+
+    class PetCare {
+        +str food
+        +int ounces_of_food
+        +bool shower
+        +bool walk
+        +bool fed
+        +feed(ounces) None
+        +all_done() bool
+    }
+
+    class Scheduler {
+        +Owner owner
+        +list~Task~ tasks
+        +pending_tasks() list~Task~
+        +mark_task_complete(task) Task
+        +build_schedule() list~Task~
+        +build_timed_schedule() list~tuple~
+        +sort_by_time() list~Task~
+        +filter_tasks(done, pet_name) list~Task~
+        +detect_conflicts() list~str~
+        +explain_plan() str
+    }
+
+    Owner "1" --> "*" Pet : owns
+    Owner "1" --> "*" Task : plans
+    Pet "1" --> "*" Task : has
+    Task "*" --> "1" Pet : is for
+    Task --> Task : next_occurrence
+    Scheduler --> Owner : reads availability
+    Scheduler "1" --> "*" Task : orders
+
+    %% Design intent: completing a Task (via care_type) is meant to update a
+    %% Pet's PetCare record. This link is not yet wired in the implementation —
+    %% PetCare currently stands alone.
+    Pet "1" ..> "1" PetCare : has (planned)

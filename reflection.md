@@ -51,13 +51,21 @@ This tradeoff is reasonable for this scenario because the goal is a *lightweight
 
 **a. How you used AI**
 
-- How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-- What kinds of prompts or questions were most helpful?
+I used AI throughout the build, but in small, controlled steps rather than asking it to write the whole system at once. The most useful pattern was asking for a *menu of incremental improvements* first ("suggest small, beginner-friendly upgrades to my scheduler") and then picking one at a time — real clock times, per-slot packing, preference matching, recurrence, conflict detection — so I always understood each change before moving on.
+
+The prompts that helped most were the specific, scoped ones:
+
+- "How could this algorithm be simplified for better readability or performance?" (on a single method)
+- "What are the most important edge cases to test for a pet scheduler with sorting and recurring tasks?"
+- "Based on my final implementation, what updates should I make to my UML diagram?"
+
+I also used AI for the mechanical parts — drafting docstrings, wiring the Streamlit UI to my Scheduler methods, and generating a test plan — which freed me to focus on the logic decisions.
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+One clear moment: when I asked AI to simplify my `detect_conflicts()` method, it suggested two changes — switching my manual `dict` + `setdefault` grouping to `collections.defaultdict`, and collapsing the whole warning-building loop into a single list comprehension. I **accepted the `defaultdict` change** (it's a clean, standard idiom with no readability cost) but **rejected the one-line comprehension**: chaining an f-string with `+ ", ".join(...) + "."` inside a comprehension was denser and harder to read, and this is a learning codebase where clarity matters more than terseness. Pythonic isn't automatically better.
+
+I verified AI suggestions two ways. First, I ran the code — every feature was checked against `main.py` output and the test suite, and I caught a real bug this way: my preference logic leaked a pet's "evening walks" preference onto *every* task for that pet (including feeding), which I only saw by tracing actual output. Second, for the UML and test-plan questions I ran the AI review in a fresh, context-free session so it evaluated the final code on its own merits rather than agreeing with earlier conversation.
 
 ---
 
@@ -65,13 +73,22 @@ This tradeoff is reasonable for this scenario because the goal is a *lightweight
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+I wrote 12 automated tests (`tests/test_pawpal.py`, run with `python -m pytest`) covering the core behaviors:
+
+- **Basic model** — marking a task done; adding a task to a pet.
+- **Time-slot packing** — tasks get sequential `"HH:MM"` start times; a task too big for any slot is dropped *without blocking* the tasks after it; and `build_schedule()` never disagrees with the timed view.
+- **Preferences** — a time-of-day preference biases the matching task into its window (and only that task).
+- **Sorting correctness** — `sort_by_time()` returns tasks in chronological order regardless of the order they were added.
+- **Recurrence** — completing a daily task creates a next-day copy (with `done` reset and no stale time), weekly advances one week, and `once` does not repeat.
+- **Conflict detection** — same-start-time tasks produce a warning naming both; distinct/unscheduled times produce none.
+
+These were important because they are exactly the "smart" behaviors that are easy to break silently — an off-by-one in slot packing, a sign flip in the sort key, or a stale time on a recurring copy would all produce a wrong schedule without throwing an error. Tests catch those regressions the moment they happen.
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+**Confidence: 4 out of 5.** All 12 tests pass and every core algorithm has direct coverage, so I'm confident the happy paths and the main edge cases work. I hold back the fifth star because a few edge cases are documented but not yet tested: the exact-slot-fit boundary (a task that fills a slot to the minute), `next_occurrence()` when a task has no due date, month/year rollover for recurrence, and combined `filter_tasks()` filters.
+
+If I had more time, those are exactly the tests I'd add next, along with a test that documents the known conflict-detection limitation: it only flags *exact* same-start-time clashes, not *overlapping durations* (a 30-minute task at 08:00 and a task at 08:15 truly overlap but aren't flagged).
 
 ---
 
@@ -79,12 +96,32 @@ This tradeoff is reasonable for this scenario because the goal is a *lightweight
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+I'm most satisfied with how the scheduler grew from a naive "sort by importance and greedily pack minutes" into something that assigns real clock times, respects preferences, handles recurrence, and warns about conflicts — all while staying readable. Building it one small feature at a time, with a test locking in each behavior before moving on, meant I never had a big broken mess to untangle. The `explain_plan()` output also makes the system's decisions transparent, which I like.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+Two things. First, `PetCare` ended up disconnected from the rest of the system — the design intended completing a task to update a pet's care state (via `care_type`), but that link was never wired up. I'd either implement it or remove the class so the code and UML match reality. Second, I'd upgrade conflict detection from exact-time matching to true interval-overlap detection, since real scheduling conflicts are about overlapping durations, not identical start times.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+The biggest thing I learned is that working with AI is most effective when *I* stay the decision-maker: scoping changes small, reading and running everything it produces, and rejecting suggestions that don't fit — like the "more Pythonic" one-liner that hurt readability. AI is fast at drafting and spotting edge cases, but verifying against real output (which is how I caught the preference bug) and knowing why each piece exists is what actually made the system reliable.
+
+---
+
+## 6. AI Strategy
+
+**a. Which AI coding assistant features were most effective for building your scheduler?**
+
+Three features did the most work for me. **Agent/automatic editing mode** let the assistant make coordinated multi-file changes — for example, adding recurrence touched `Task`, the `Scheduler`, `main.py`, and the tests together, which would have been tedious to keep in sync by hand. **The chat, used on one specific method at a time**, was best for reasoning ("how do I sort `"HH:MM"` strings with a lambda key?", "how does `timedelta` handle month rollover?") because the answers were focused and I could follow them. And **running the code and tests inside the workflow** meant I could verify each change immediately instead of guessing whether it worked.
+
+**b. One AI suggestion you rejected or modified to keep your design clean**
+
+When I asked the assistant to simplify `detect_conflicts()`, it offered to collapse the whole warning-building loop into a single list comprehension with an inline f-string and `", ".join(...)`. It was shorter and technically more "Pythonic," but it packed the logic into one dense line that was hard to read. I rejected that part and kept my explicit `for` loop, adopting only the smaller `defaultdict` change that improved clarity without costing it. Readability beat cleverness.
+
+**c. How did using separate chat sessions for different phases help you stay organized?**
+
+Keeping sessions separate stopped context from bleeding between phases. I planned the algorithms in one session, then ran the *testing* work in a fresh session so the assistant would think about edge cases from scratch rather than just defending code it had already written. I did the same for the UML review — a clean, context-free session evaluated my final `pawpal_system.py` on its own merits and honestly flagged that my `PetCare` class was disconnected, something a session invested in the earlier work might have glossed over. Fresh sessions gave me more independent, less biased feedback.
+
+**d. What you learned about being the "lead architect" when collaborating with powerful AI tools**
+
+The AI is a very fast implementer, but it will happily build the wrong thing well, or optimize for the wrong quality (terseness over readability). Being the lead architect meant I owned the decisions: what to build and in what order, which suggestions to accept, and — most importantly — verifying the output against reality instead of trusting it. The clearest proof was catching the preference-leak bug by reading actual `main.py` output; the code *ran* and looked plausible, but only a human checking behavior against intent noticed it was wrong. AI amplified how fast I could work, but the judgment about whether the system was actually correct and well-designed had to stay with me.

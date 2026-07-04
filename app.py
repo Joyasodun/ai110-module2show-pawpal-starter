@@ -80,8 +80,21 @@ if st.button("Add task"):
     )
     owner.add_task(task)  # calls your method; also attaches the task to the pet
 
-if owner.get_all_tasks():
+scheduler = Scheduler(owner)  # the "brain" that reads the owner and its tasks
+
+# --- Current tasks, filterable by pet ---
+all_tasks = owner.get_all_tasks()
+if all_tasks:
     st.write("Current tasks:")
+
+    pet_names = ["All pets"] + [p.name for p in owner.pets]
+    chosen_pet = st.selectbox("Filter by pet", pet_names)
+
+    if chosen_pet == "All pets":
+        shown = all_tasks
+    else:
+        shown = scheduler.filter_tasks(pet_name=chosen_pet)
+
     st.table(
         [
             {
@@ -89,8 +102,9 @@ if owner.get_all_tasks():
                 "pet": t.pet.name,
                 "duration_minutes": t.duration_minutes,
                 "importance": t.importance,
+                "done": "✅" if t.done else "⬜️",
             }
-            for t in owner.get_all_tasks()
+            for t in shown
         ]
     )
 else:
@@ -98,10 +112,37 @@ else:
 
 st.divider()
 
-st.subheader("Build Schedule")
-st.caption("This button should call your scheduling logic once you implement it.")
+st.subheader("Today's Schedule")
+st.caption("Builds a timed plan from your tasks, sorted by clock time, and flags conflicts.")
 
 if st.button("Generate schedule"):
-    scheduler = Scheduler(owner)  # hand your brain the owner and its tasks
-    plan = scheduler.explain_plan()  # your method returns the human-readable plan
-    st.text(plan)
+    if not owner.pending_tasks():
+        st.info("No pending tasks to schedule. Add a task above first.")
+    else:
+        # Conflict warnings first — surface problems before the plan itself.
+        conflicts = scheduler.detect_conflicts()
+        for warning in conflicts:
+            st.warning(warning)
+
+        # The sorted, timed plan as a clean table.
+        sorted_tasks = scheduler.sort_by_time()
+        if sorted_tasks:
+            st.success(f"Scheduled {len(sorted_tasks)} task(s) for {owner.name}.")
+            st.table(
+                [
+                    {
+                        "time": t.time,
+                        "task": t.todo,
+                        "pet": t.pet.name,
+                        "duration_minutes": t.duration_minutes,
+                        "importance": t.importance,
+                    }
+                    for t in sorted_tasks
+                ]
+            )
+        else:
+            st.warning("No tasks fit into the available hours.")
+
+        # The human-readable explanation of why each task was placed.
+        with st.expander("Why was each task scheduled?"):
+            st.text(scheduler.explain_plan())
