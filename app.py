@@ -1,3 +1,5 @@
+from datetime import time
+
 import streamlit as st
 
 from pawpal_system import Owner, Pet, Scheduler, Task
@@ -50,20 +52,9 @@ st.caption("Add a few tasks. In your final version, these should feed into your 
 
 # Create the Owner once and keep it in the session "vault" so tasks persist.
 if "owner" not in st.session_state:
-    st.session_state.owner = Owner(owner_name, available_hours=["Morning", "Afternoon", "Evening"])
+    st.session_state.owner = Owner(owner_name)
 
 owner = st.session_state.owner
-
-# Let the user choose which parts of the day they're available for care.
-st.markdown("### Availability")
-st.caption("Pick the parts of the day you're free. Tasks are scheduled into these windows.")
-availability = st.multiselect(
-    "Available parts of day",
-    options=["Morning", "Afternoon", "Evening"],
-    default=owner.get_availability() or ["Morning", "Afternoon", "Evening"],
-    help="Morning: 8:00 AM–12:00 PM · Afternoon: 12:00 PM–7:00 PM · Evening: 7:00 PM–12:00 AM",
-)
-owner.available_hours = availability
 
 # Make sure a Pet with this name exists on the owner; reuse it if it's already there.
 pet = next((p for p in owner.pets if p.name == pet_name), None)
@@ -71,12 +62,17 @@ if pet is None:
     pet = Pet(pet_name, species)
     owner.add_pet(pet)
 
-col1, col2, col3 = st.columns(3)
+# The user picks the start time and duration for each task themselves.
+col1, col2 = st.columns(2)
 with col1:
     task_title = st.text_input("Task title", value="Morning walk")
 with col2:
-    duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20)
+    start_time = st.time_input("Start time", value=time(8, 0))
+
+col3, col4 = st.columns(2)
 with col3:
+    duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20)
+with col4:
     # Importance is a 1-5 scale (higher = more urgent), matching Task.importance.
     importance = st.number_input("Importance (1-5)", min_value=1, max_value=5, value=5)
 
@@ -86,6 +82,9 @@ if st.button("Add task"):
         importance=int(importance),
         duration_minutes=int(duration),
         pet=pet,
+        # Store the user's chosen start time in the same 12-hour format the
+        # scheduler uses, e.g. "8:00 AM".
+        time=start_time.strftime("%-I:%M %p"),
     )
     owner.add_task(task)  # calls your method; also attaches the task to the pet
 
@@ -122,10 +121,11 @@ else:
 st.divider()
 
 st.subheader("Today's Schedule")
-st.caption("Builds a timed plan from your tasks, sorted by clock time, and flags conflicts.")
+st.caption("Shows your tasks at the times you chose, sorted by clock time, and flags conflicts.")
 
 if st.button("Generate schedule"):
-    if not scheduler.pending_tasks():
+    pending = scheduler.pending_tasks()
+    if not pending:
         st.info("No pending tasks to schedule. Add a task above first.")
     else:
         # Conflict warnings first — surface problems before the plan itself.
@@ -133,25 +133,20 @@ if st.button("Generate schedule"):
         for warning in conflicts:
             st.warning(warning)
 
-        # The sorted, timed plan as a clean table.
-        sorted_tasks = scheduler.sort_by_time()
-        if sorted_tasks:
-            st.success(f"Scheduled {len(sorted_tasks)} task(s) for {owner.name}.")
-            st.table(
-                [
-                    {
-                        "time": t.time,
-                        "task": t.todo,
-                        "pet": t.pet.name,
-                        "duration_minutes": t.duration_minutes,
-                        "importance": t.importance,
-                    }
-                    for t in sorted_tasks
-                ]
-            )
-        else:
-            st.warning("No tasks fit into the available hours.")
-
-        # The human-readable explanation of why each task was placed.
-        with st.expander("Why was each task scheduled?"):
-            st.text(scheduler.explain_plan())
+        # Sort the tasks by the start time the user chose (chronologically).
+        sorted_tasks = sorted(
+            pending, key=lambda t: scheduler._clock_to_minutes(t.time)
+        )
+        st.success(f"Scheduled {len(sorted_tasks)} task(s) for {owner.name}.")
+        st.table(
+            [
+                {
+                    "time": t.time,
+                    "task": t.todo,
+                    "pet": t.pet.name,
+                    "duration_minutes": t.duration_minutes,
+                    "importance": t.importance,
+                }
+                for t in sorted_tasks
+            ]
+        )
