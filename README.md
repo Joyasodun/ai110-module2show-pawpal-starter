@@ -60,19 +60,41 @@ Care plan for Alex:
 
 ## 🧪 Testing PawPal+
 
+Run the full test suite from the project root:
+
 ```bash
-# Run the full test suite:
-pytest
-
-# Run with coverage:
-pytest --cov
+python -m pytest
 ```
 
-Sample test output:
+### What the tests cover
+
+The suite (12 tests in `tests/test_pawpal.py`) verifies the core scheduling behaviors:
+
+- **Basic model** — marking a task done, and adding a task to a pet.
+- **Time-slot packing** — tasks get sequential `"HH:MM"` start times, a task too big for any slot is dropped without blocking others, and `build_schedule()` never disagrees with the timed view.
+- **Preferences** — a time-of-day preference biases the matching task into its window.
+- **Sorting correctness** — `sort_by_time()` returns tasks in chronological order regardless of add/importance order.
+- **Recurring tasks** — completing a daily task creates a next-day copy (with `done` reset and no stale time), weekly advances one week, and `once` does not recur.
+- **Conflict detection** — tasks sharing a start time produce a warning naming both; distinct/unscheduled times produce none.
+
+### Successful test run
 
 ```
-# Paste your pytest output here
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/johnoyasodun/CodePath/ai110-module2show-pawpal-starter
+collected 12 items
+
+tests/test_pawpal.py ............                                        [100%]
+
+============================== 12 passed in 0.01s ==============================
 ```
+
+### Confidence Level
+
+⭐⭐⭐⭐☆ (4 / 5)
+
+All 12 tests pass and cover every core behavior — sorting, recurrence, conflict detection, slot packing, and filtering paths. I hold back the fifth star because a few edge cases are documented but not yet tested: exact-slot-fit boundaries, `next_occurrence()` with no due date, month/year rollover for recurrence, and combined `filter_tasks()` filters. The known limitation that conflict detection catches only exact same-time clashes (not overlapping durations) also caps full confidence.
 
 ## 📐 Smarter Scheduling
 

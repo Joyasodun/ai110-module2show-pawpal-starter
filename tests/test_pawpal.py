@@ -106,6 +106,9 @@ def test_completing_daily_task_creates_next_day_occurrence():
     assert new_task.done is False
     assert new_task.due_date == date(2026, 7, 5)
     assert new_task in owner.get_all_tasks()
+    # The fresh copy must not inherit the original's stamped start time,
+    # otherwise it would immediately clash with the completed task.
+    assert new_task.time == ""
 
 
 def test_completing_weekly_task_advances_by_one_week():
@@ -136,6 +139,31 @@ def test_completing_once_task_does_not_recur():
     assert len(owner.get_all_tasks()) == 1
 
 
+def test_sort_by_time_returns_tasks_in_chronological_order():
+    """sort_by_time() must return scheduled tasks ordered earliest-first.
+
+    We give the owner three availability slots and three tasks. The scheduler
+    assigns each a start time, and sort_by_time() should hand them back in
+    chronological order regardless of the order they were added or scheduled.
+    """
+    owner = Owner("Alex", available_hours=["08:00", "12:00", "18:00"])
+    rex = Pet("Rex", "dog")
+    owner.add_pet(rex)
+    # Add tasks whose importance would NOT already place them in time order,
+    # so we know the ordering comes from sort_by_time(), not the add order.
+    owner.add_task(Task("Big morning", importance=5, duration_minutes=55, pet=rex))
+    owner.add_task(Task("Big noon", importance=4, duration_minutes=55, pet=rex))
+    owner.add_task(Task("Big evening", importance=3, duration_minutes=55, pet=rex))
+
+    ordered = Scheduler(owner).sort_by_time()
+    times = [task.time for task in ordered]
+
+    # Each task lands in its own slot; the returned list is earliest-first.
+    assert times == ["08:00", "12:00", "18:00"]
+    # And the times are sorted (defensive check that it's truly chronological).
+    assert times == sorted(times)
+
+
 def test_detect_conflicts_flags_same_time_tasks():
     """Two tasks at the same start time produce one warning; program continues."""
     owner = Owner("Alex")
@@ -150,6 +178,9 @@ def test_detect_conflicts_flags_same_time_tasks():
 
     assert len(warnings) == 1
     assert "09:00" in warnings[0]
+    # Both clashing tasks should be named in the single warning message.
+    assert "Medicine" in warnings[0]
+    assert "Brush" in warnings[0]
 
 
 def test_detect_conflicts_empty_when_times_differ():
